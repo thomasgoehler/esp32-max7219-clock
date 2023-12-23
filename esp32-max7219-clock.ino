@@ -36,13 +36,6 @@ char szTime[9];    // mm:ss\0
 char szsecond[4];    // ss
 char szMesg[MAX_MESG+1] = "";
 
-// scroll text variables //
-uint8_t scrollSpeed = 150;    // set initial scroll speed, can be a value between 10 (max) and 150 (min)
-textEffect_t scrollEffect  = PA_SCROLL_LEFT;  // scroll direction, right-to-left direction
-textPosition_t scrollAlign = PA_LEFT;         // scroll align
-uint16_t scrollPause = 2000;                  // scroll pause in milliseconds
-// // // // // // // // //
-
 void getsec(char *psz)
 {
   sprintf(psz, "%02d", s);
