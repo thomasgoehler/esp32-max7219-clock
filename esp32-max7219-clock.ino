@@ -25,7 +25,7 @@ MD_Parola P = MD_Parola(HARDWARE_TYPE, DATA_PIN, CLK_PIN, CS_PIN, MAX_DEVICES);
 // #define SET_SSID "YOUR WIFI SSID"
 // #define SET_PASSWORD "YOUR PASSWORD"
 // #define SET_TIMEZONE_SECONDS 3600 // your timezone is GMT plus or minus a known value.
-// For example GMT+1(Germany) the value 3600 seconds. For GMT+2 use the value 7200 ... and so on.   
+// For example GMT+1(Germany) the value 3600 seconds. For GMT+2 use the value 7200 ... and so on.
 
 /**********  User Config Setting   ******************************/
 const char* ssid = SET_SSID;
@@ -43,13 +43,11 @@ char szTime[9];    // mm:ss\0
 char szsecond[4];    // ss
 char szMesg[MAX_MESG+1] = "";
 
-void getsec(char *psz)
-{
+void getsec(char *psz) {
   sprintf(psz, "%02d", s);
 }
 
-void getTime(char *psz, bool f = true)
-{
+void getTime(char *psz, bool f = true) {
   time_t now = time(nullptr);
   struct tm* p_tm = localtime(&now);
   h = p_tm->tm_hour;
@@ -59,8 +57,7 @@ void getTime(char *psz, bool f = true)
   Serial.println(psz);
 }
 
-void setup(void)
-{
+void setup(void) {
   Serial.begin(115200);
   delay(10);
 
@@ -98,8 +95,7 @@ void setup(void)
   getTime(szTime);
 }
 
-void loop(void)
-{
+void loop(void) {
   static uint32_t lastTime = 0; // millis() memory
   static uint32_t lastSyncTime = 0; // time of last synchronization
   static uint8_t display = 0;  // current display mode
@@ -107,32 +103,29 @@ void loop(void)
 
   P.displayAnimate();
 
-  if (millis() - lastTime >= 1000)
-  {
+  if (millis() - lastTime >= 1000) {
     lastTime = millis();
     getTime(szTime, flasher);
     flasher = !flasher;
 
-    // Jetzt wird getsec nach getTime aufgerufen
+    // Now getsec is called after getTime
     getsec(szsecond);
 
     P.displayReset(0);
     P.displayReset(1);
   }
 
-  // Überprüfe die Zeit einmal pro Stunde und synchronisiere erneut
-  if (millis() - lastSyncTime >= 3600000)  // 3600000 Millisekunden = 1 Stunde
+  // Check the time once per hour and resynchronize
+  if (millis() - lastSyncTime >= 3600000)  // 3600000 milliseconds = 1 hour
   {
     lastSyncTime = millis();
     checkAndSyncTime();
   }
 }
 
-
-void checkAndSyncTime()
-{
+void checkAndSyncTime() {
   Serial.println("Checking and syncing time...");
-  // Überprüfe, ob Sommerzeit aktiv ist
+  // Check if Daylight Saving Time is active
   struct tm timeinfo;
   if (!getLocalTime(&timeinfo)) {
     Serial.println("Failed to obtain time");
@@ -145,15 +138,14 @@ void checkAndSyncTime()
   Serial.println(dst);
 }
 
-void getTimentp()
-{
+void getTimentp() {
   configTime(timezoneinSeconds, dst, "de.pool.ntp.org", "time.nist.gov");
-  while (!time(nullptr)){
+  while (!time(nullptr)) {
     delay(500);
     Serial.print(".");
   }
 
-  // Überprüfe, ob Sommerzeit aktiv ist
+  // Check if Daylight Saving Time is active
   struct tm timeinfo;
   if (!getLocalTime(&timeinfo)) {
     Serial.println("Failed to obtain time");
