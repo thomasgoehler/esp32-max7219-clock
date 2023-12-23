@@ -21,8 +21,8 @@ MD_Parola P = MD_Parola(HARDWARE_TYPE, DATA_PIN, CLK_PIN, CS_PIN, MAX_DEVICES);
 #define MAX_MESG  20
 
 /**********  User Config Setting   ******************************/
-char* ssid = "YOUR SSID";
-char* password = "YOUR PASSWORD";
+char* ssid = "";
+char* password = "";
 const int timezoneinSeconds = 3600;
 /***************************************************************/
 int dst = 0;
@@ -35,6 +35,13 @@ String year;
 char szTime[9];    // mm:ss\0
 char szsecond[4];    // ss
 char szMesg[MAX_MESG+1] = "";
+
+// scroll text variables //
+uint8_t scrollSpeed = 150;    // set initial scroll speed, can be a value between 10 (max) and 150 (min)
+textEffect_t scrollEffect  = PA_SCROLL_LEFT;  // scroll direction, right-to-left direction
+textPosition_t scrollAlign = PA_LEFT;         // scroll align
+uint16_t scrollPause = 2000;                  // scroll pause in milliseconds
+// // // // // // // // //
 
 void getsec(char *psz)
 {
@@ -103,9 +110,11 @@ void loop(void)
   if (millis() - lastTime >= 1000)
   {
     lastTime = millis();
-    getsec(szsecond);
     getTime(szTime, flasher);
     flasher = !flasher;
+
+    // Jetzt wird getsec nach getTime aufgerufen
+    getsec(szsecond);
 
     P.displayReset(0);
     P.displayReset(1);
@@ -118,6 +127,7 @@ void loop(void)
     checkAndSyncTime();
   }
 }
+
 
 void checkAndSyncTime()
 {
