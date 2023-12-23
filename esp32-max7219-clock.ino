@@ -20,10 +20,17 @@ MD_Parola P = MD_Parola(HARDWARE_TYPE, DATA_PIN, CLK_PIN, CS_PIN, MAX_DEVICES);
 #define PAUSE_TIME  0
 #define MAX_MESG  20
 
+#include "config.h" // config file with wifi credentials
+// create a file named "config.h" and paste the following lines:
+// #define SET_SSID "YOUR WIFI SSID"
+// #define SET_PASSWORD "YOUR PASSWORD"
+// #define SET_TIMEZONE_SECONDS 3600 // your timezone is GMT plus or minus a known value.
+// For example GMT+1(Germany) the value 3600 seconds. For GMT+2 use the value 7200 ... and so on.   
+
 /**********  User Config Setting   ******************************/
-char* ssid = "";
-char* password = "";
-const int timezoneinSeconds = 3600;
+const char* ssid = SET_SSID;
+const char* password = SET_PASSWORD;
+const int timezoneinSeconds = SET_TIMEZONE_SECONDS;
 /***************************************************************/
 int dst = 0;
 uint16_t h, m, s;
