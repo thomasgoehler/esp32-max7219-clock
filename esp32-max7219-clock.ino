@@ -1,5 +1,5 @@
 // Header file includes
-#include <WiFi.h>
+#include <WiFiManager.h> // https://github.com/tzapu/WiFiManager
 #include <time.h>
 #include <MD_Parola.h>
 #include <SPI.h>
@@ -20,17 +20,8 @@ MD_Parola P = MD_Parola(HARDWARE_TYPE, DATA_PIN, CLK_PIN, CS_PIN, MAX_DEVICES);
 #define PAUSE_TIME  0
 #define MAX_MESG  20
 
-#include "config.h" // config file with wifi credentials
-// create a file named "config.h" and paste the following lines:
-// #define SET_SSID "YOUR WIFI SSID"
-// #define SET_PASSWORD "YOUR PASSWORD"
-// #define SET_TIMEZONE_SECONDS 3600 // your timezone is GMT plus or minus a known value.
-// For example GMT+1(Germany) the value 3600 seconds. For GMT+2 use the value 7200 ... and so on.
-
 /**********  User Config Setting   ******************************/
-const char* ssid = SET_SSID;
-const char* password = SET_PASSWORD;
-const int timezoneinSeconds = SET_TIMEZONE_SECONDS;
+const int timezoneinSeconds = 3600;
 /***************************************************************/
 int dst = 0;
 uint16_t h, m, s;
@@ -58,27 +49,41 @@ void getTime(char *psz, bool f = true) {
 }
 
 void setup(void) {
-  Serial.begin(115200);
-  delay(10);
 
-  Serial.println();
-  Serial.println();
-  Serial.print("Connecting to ");
-  Serial.println(ssid);
+  // WiFi.mode(WIFI_STA); // explicitly set mode, esp defaults to STA+AP
+    // it is a good practice to make sure your code sets wifi mode how you want it.
 
-  WiFi.begin(ssid, password);
+    // put your setup code here, to run once:
+    Serial.begin(115200);
+    
+    //WiFiManager, Local intialization. Once its business is done, there is no need to keep it around
+    WiFiManager wm;
 
-  while (WiFi.status() != WL_CONNECTED) {
-    delay(500);
-    Serial.print(".");
-  }
+    // reset settings - wipe stored credentials for testing
+    // these are stored by the esp library
+    // wm.resetSettings();
 
-  Serial.println("");
-  Serial.println("WiFi connected");
-  Serial.println("IP address: ");
-  Serial.println(WiFi.localIP());
+    // Automatically connect using saved credentials,
+    // if connection fails, it starts an access point with the specified name ( "AutoConnectAP"),
+    // if empty will auto generate SSID, if password is blank it will be anonymous AP (wm.autoConnect())
+    // then goes into a blocking loop awaiting configuration and will return success result
+
+    bool res;
+    // res = wm.autoConnect(); // auto generated AP name from chipid
+    res = wm.autoConnect("Matrix Clock AP"); // anonymous ap
+    // res = wm.autoConnect("AutoConnectAP","password"); // password protected ap
+
+    if(!res) {
+        Serial.println("Failed to connect");
+        // ESP.restart();
+    } 
+    else {
+        //if you get here you have connected to the WiFi    
+        Serial.println("connected...yeey :)");
+    } 
+
+
   delay(3000);
-  WiFi.mode(WIFI_STA);
   getTimentp();
 
   P.begin(3);
