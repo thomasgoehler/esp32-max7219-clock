@@ -126,6 +126,9 @@ void showWeather() {
     dtostrf(myObject["wind"]["speed"], 4, 2, windSpeedStr);
     strcpy(descriptionStr, myObject["weather"][0]["description"]);
 
+    // replace german umlauts in description
+    String cleanedDescription = replaceUmlaute(descriptionStr);
+
     Serial.print("Temperature: ");
     Serial.println(temperatureStr);
     Serial.print("Pressure: ");
@@ -135,17 +138,17 @@ void showWeather() {
     Serial.print("Wind Speed: ");
     Serial.println(windSpeedStr);
     Serial.print("Description: ");
-    Serial.println(descriptionStr);
+    Serial.println(cleanedDescription);
 
     char alles[200];
     strcpy(alles, "Wetter: ");
-    strcat(alles, descriptionStr);
+    strcat(alles, cleanedDescription.c_str());
     strcat(alles, ", ");
     strcat(alles, "Temperatur: ");
     strcat(alles, temperatureStr);
-    strcat(alles, " C, Druck: ");
+    strcat(alles, " C, Luftdruck: ");
     strcat(alles, pressureStr);
-    strcat(alles, " hPa, Luftfeuchte: ");
+    strcat(alles, " hPa, Luftfeuchtigkeit: ");
     strcat(alles, humidityStr);
     strcat(alles, " %, Wind: ");
     strcat(alles, windSpeedStr);
@@ -286,4 +289,15 @@ String httpGETRequest(const char *serverName) {
 
   http.end();
   return payload;
+}
+
+String replaceUmlaute(String input) {
+  input.replace("Ä", "Ae");
+  input.replace("ä", "ae");
+  input.replace("Ö", "Oe");
+  input.replace("ö", "oe");
+  input.replace("Ü", "Ue");
+  input.replace("ü", "ue");
+  input.replace("ß", "ss");
+  return input;
 }
