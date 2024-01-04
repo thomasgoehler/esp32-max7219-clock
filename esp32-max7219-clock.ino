@@ -1,9 +1,12 @@
 #include <WiFiManager.h>
+#include <WiFiClientSecure.h>
+#include <UniversalTelegramBot.h>
 #include <time.h>
 #include <MD_Parola.h>
 #include <SPI.h>
 #include <HTTPClient.h>
 #include <Arduino_JSON.h>
+
 #include "Font_Data.h"
 #include "config.h"
 
@@ -18,6 +21,16 @@ MD_Parola P = MD_Parola(HARDWARE_TYPE, DATA_PIN, CLK_PIN, CS_PIN, MAX_DEVICES);
 #define SPEED_TIME  75
 #define PAUSE_TIME  0
 #define MAX_MESG  20
+
+// Telegram settings
+const unsigned long BOT_MTBS = 1000;
+String botToken = BOT_TOKEN;
+WiFiClientSecure secured_client;
+UniversalTelegramBot bot(botToken, secured_client);
+unsigned long bot_lasttime;
+unsigned long lastBotUpdate = 0;
+const unsigned long botUpdateInterval = BOT_MTBS;
+char telegramText[256] = {'\0'};
 
 uint8_t scrollSpeed = 10;
 textEffect_t scrollEffect = PA_SCROLL_LEFT;
@@ -101,6 +114,29 @@ void showDate() {
   }
 }
 
+void showTelegramText() {
+  int counter = 0;
+  P.begin();
+  P.setIntensity(0);
+  P.displayClear();
+  P.displayText(telegramText, scrollAlign, scrollSpeed, scrollPause, scrollEffect, scrollEffect);
+
+  while (counter != 1) {
+    int speed;
+    if (speed != P.getSpeed())
+      P.setSpeed(60);
+
+    if (P.displayAnimate()) {
+      P.displayReset();
+      counter++;
+    }
+  }
+  for (int i = 0; i < sizeof(telegramText); ++i) {
+    telegramText[i] = '\0';
+}
+char telegramText[256] = {'\0'};
+}
+
 void showWeather() {
   if (WiFi.status() != WL_CONNECTED) {
     Serial.println("WiFi Disconnected");
@@ -160,6 +196,26 @@ void showWeather() {
   weatherLastTime = millis();
 }
 
+
+void updateTelegram(void *pvParameters) {
+  while (true) {
+    if (millis() - lastBotUpdate > botUpdateInterval) {
+      int numNewMessages = bot.getUpdates(bot.last_message_received + 1);
+
+      while (numNewMessages) {
+        Serial.println("got response");
+        handleNewMessages(numNewMessages);
+        numNewMessages = bot.getUpdates(bot.last_message_received + 1);
+      }
+
+      lastBotUpdate = millis();
+    }
+    delay(1000);
+  }
+}
+
+
+
 void setup(void) {
   WiFi.mode(WIFI_STA);
   Serial.begin(115200);
@@ -178,6 +234,7 @@ void setup(void) {
   }
 
   delay(3000);
+  secured_client.setCACert(TELEGRAM_CERTIFICATE_ROOT);
   showText("synchronisiere mit NTP Server");
   getTimentp();
 
@@ -192,9 +249,21 @@ void setup(void) {
   P.setIntensity(0);
 
   getTime(szTime);
+
+  // Starte den Hintergrundthread für die Telegram-Aktualisierung
+  xTaskCreatePinnedToCore(
+    updateTelegram,  // Funktion des Threads
+    "TelegramUpdate", // Name des Threads
+    10000,            // Stack-Größe des Threads
+    NULL,             // Parameter für die Funktion (hier nicht verwendet)
+    1,                // Priorität des Threads
+    NULL,             // Handle für den erstellten Task (hier nicht verwendet)
+    0                 // Core, auf dem der Task ausgeführt werden soll (0 oder 1)
+  );
 }
 
 void loop(void) {
+
   static uint32_t lastTime = 0;
   static uint32_t lastSyncTime = 0;
   static uint32_t lastShowDateOrWeather = 0;
@@ -219,12 +288,20 @@ void loop(void) {
 
   if (millis() - lastShowDateOrWeather >= 60000) {
     lastShowDateOrWeather = millis();
+    
     if (lastShown == 0)
+    {
       showDate();
-    else
+      lastShown = 1;
+      lastShowDateOrWeather = millis(); // set 60 seconds timer to zero
+    }
+    else if (lastShown == 1)
+    {
       showWeather();
-
-    lastShown = 1 - lastShown;
+      lastShown = 0;
+      lastShowDateOrWeather = millis(); // set 60 seconds timer to zero
+    }
+      
     P.begin(3);
     P.setInvert(false);
     P.setZone(0, 0, 0);
@@ -234,6 +311,23 @@ void loop(void) {
     P.displayZoneText(0, szSecond, PA_LEFT, SPEED_TIME, 0, PA_PRINT, PA_NO_EFFECT);
     P.displayZoneText(1, szTime, PA_CENTER, SPEED_TIME, PAUSE_TIME, PA_PRINT, PA_NO_EFFECT);
     P.setIntensity(0);
+  }
+  else
+  {
+    if (telegramText[0] != '\0')
+    {
+      showTelegramText();
+      P.begin(3);
+      P.setInvert(false);
+      P.setZone(0, 0, 0);
+      P.setZone(1, 1, 3);
+      P.setFont(0, numeric7Seg);
+      P.setFont(1, numeric7Se);
+      P.displayZoneText(0, szSecond, PA_LEFT, SPEED_TIME, 0, PA_PRINT, PA_NO_EFFECT);
+      P.displayZoneText(1, szTime, PA_CENTER, SPEED_TIME, PAUSE_TIME, PA_PRINT, PA_NO_EFFECT);
+      P.setIntensity(0);
+      lastShowDateOrWeather = millis(); // after showing telegram message set 60 seconds timer to zero
+    }
   }
 }
 
@@ -300,4 +394,16 @@ String replaceUmlaute(String input) {
   input.replace("ü", "ue");
   input.replace("ß", "ss");
   return input;
+}
+
+void handleNewMessages(int numNewMessages)
+{
+  String messageContent;
+  for (int i = 0; i < numNewMessages; i++)
+  {
+    bot.sendMessage(bot.messages[i].chat_id, "message received", "");
+    Serial.print(bot.messages[i].text);
+    messageContent += bot.messages[i].text;
+  }
+  strcpy(telegramText, messageContent.c_str());
 }
