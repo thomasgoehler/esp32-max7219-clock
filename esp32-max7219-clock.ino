@@ -41,6 +41,7 @@ const int timezoneInSeconds = 3600;
 String openWeatherMapApiKey = OPEN_WEATHER_API_KEY;
 String city = CITY;
 String countryCode = COUNTRYCODE;
+uint8_t degC[] = { 6, 3, 3, 56, 68, 68, 68 }; // Deg C
 
 unsigned long weatherLastTime = 0;
 unsigned long weatherTimerDelay = 10;
@@ -117,6 +118,7 @@ void showDate() {
 void showTelegramText() {
   int counter = 0;
   P.begin();
+  P.addChar('$', degC);
   P.setIntensity(0);
   P.displayClear();
   P.displayText(telegramText, scrollAlign, scrollSpeed, scrollPause, scrollEffect, scrollEffect);
@@ -182,7 +184,7 @@ void showWeather() {
     strcat(alles, ", ");
     strcat(alles, "Temperatur: ");
     strcat(alles, temperatureStr);
-    strcat(alles, " C, Luftdruck: ");
+    strcat(alles, " \xB0""C, Luftdruck: ");
     strcat(alles, pressureStr);
     strcat(alles, " hPa, Luftfeuchtigkeit: ");
     strcat(alles, humidityStr);
@@ -245,20 +247,21 @@ void setup(void) {
   P.setFont(0, numeric7Seg);
   P.setFont(1, numeric7Se);
   P.displayZoneText(0, szSecond, PA_LEFT, SPEED_TIME, 0, PA_PRINT, PA_NO_EFFECT);
-  P.displayZoneText(1, szTime, PA_CENTER, SPEED_TIME, PAUSE_TIME, PA_PRINT, PA_NO_EFFECT);
+  //P.displayZoneText(0, szSecond, PA_LEFT, SPEED_TIME, 0, PA_GROW_DOWN, PA_GROW_UP); //PA_GROW_DOWN
+  P.displayZoneText(1, szTime, PA_CENTER, SPEED_TIME, PAUSE_TIME, PA_PRINT, PA_NO_EFFECT); 
   P.setIntensity(0);
 
   getTime(szTime);
 
-  // Starte den Hintergrundthread für die Telegram-Aktualisierung
+  // Start the Telegram update background thread
   xTaskCreatePinnedToCore(
-    updateTelegram,  // Funktion des Threads
-    "TelegramUpdate", // Name des Threads
-    10000,            // Stack-Größe des Threads
-    NULL,             // Parameter für die Funktion (hier nicht verwendet)
-    1,                // Priorität des Threads
-    NULL,             // Handle für den erstellten Task (hier nicht verwendet)
-    0                 // Core, auf dem der Task ausgeführt werden soll (0 oder 1)
+    updateTelegram,  // Thread function
+    "TelegramUpdate", // Thread name
+    10000,            // Thread stacksize
+    NULL,             // n/a
+    1,                // Thread priority
+    NULL,             // n/a
+    0                 // Core on which the task is to be run (0 or 1)
   );
 }
 
