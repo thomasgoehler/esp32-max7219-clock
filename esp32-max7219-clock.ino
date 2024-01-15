@@ -37,7 +37,7 @@ textEffect_t scrollEffect = PA_SCROLL_LEFT;
 textPosition_t scrollAlign = PA_LEFT;
 uint16_t scrollPause = 10;
 
-const int timezoneInSeconds = 3600;
+const int timezoneInSeconds = TZ_DATA;
 String openWeatherMapApiKey = OPEN_WEATHER_API_KEY;
 String city = CITY;
 String countryCode = COUNTRYCODE;
