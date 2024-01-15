@@ -167,6 +167,10 @@ void showWeather() {
     // replace german umlauts in description
     String cleanedDescription = replaceUmlaute(descriptionStr);
 
+    Serial.print("City, Country: ");
+    Serial.print(CITY);
+    Serial.print(", ");
+    Serial.println(COUNTRYCODE);
     Serial.print("Temperature: ");
     Serial.println(temperatureStr);
     Serial.print("Pressure: ");
@@ -179,20 +183,9 @@ void showWeather() {
     Serial.println(cleanedDescription);
 
     char alles[200];
-    strcpy(alles, "Wetter: ");
-    strcat(alles, cleanedDescription.c_str());
-    strcat(alles, ", ");
-    strcat(alles, "Temperatur: ");
-    strcat(alles, temperatureStr);
-    strcat(alles, " \xB0""C, Luftdruck: ");
-    strcat(alles, pressureStr);
-    strcat(alles, " hPa, Luftfeuchtigkeit: ");
-    strcat(alles, humidityStr);
-    strcat(alles, " %, Wind: ");
-    strcat(alles, windSpeedStr);
-    strcat(alles, " m/s");
+    sprintf(alles, "Das aktuelle Wetter fuer %s, %s: %s, Temperatur: %s \xB0""C, Luftdruck: %s hPa, Luftfeuchtigkeit: %s %%, Wind: %s m/s", CITY, COUNTRYCODE, cleanedDescription.c_str(), temperatureStr, pressureStr, humidityStr, windSpeedStr);
 
-    showText(alles);
+showText(alles);
   }
 
   weatherLastTime = millis();
