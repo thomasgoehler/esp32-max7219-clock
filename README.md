@@ -10,5 +10,5 @@ Please create a config.h file in the same path where esp32-max7219-clock.ino is 
 #define COUNTRYCODE "ISO ALPHA COUNTRY CODE OF YOUR LOCATION"
 #define BOT_TOKEN "PASTE YOUR TELEGRAM BOT TOKEN HERE"
 #define TZ_DATA 3600 // please paste your time // Please enter the deviation of your time zone from GMT in seconds without considering DST. Example: GMT+1 is 3600
-/***************************************************************
+/***************************************************************/
 ```
