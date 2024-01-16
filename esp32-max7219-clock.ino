@@ -224,8 +224,8 @@ void setup(void) {
     Serial.println("Failed to connect");
     showText("WLAN konnte nicht verbunden werden!");
   } else {
-    Serial.println("connected...yeey :)");
-    showText("WLAN verbunden!");
+    Serial.println("connected...");
+    showText("WLAN verbunden...");
   }
 
   delay(3000);
