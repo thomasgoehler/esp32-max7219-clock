@@ -44,8 +44,8 @@ uint16_t scrollPause = 10;
 
 const int timezoneInSeconds = TZ_DATA;
 String openWeatherMapApiKey = OPEN_WEATHER_API_KEY;
-String city = CITY;
-String countryCode = COUNTRYCODE;
+String city;
+String countryCode;
 uint8_t degC[] = { 6, 3, 3, 56, 68, 68, 68 }; // Deg C
 
 unsigned long weatherLastTime = 0;
