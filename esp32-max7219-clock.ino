@@ -6,7 +6,6 @@
 #include <SPI.h>
 #include <HTTPClient.h>
 #include <Arduino_JSON.h>
-#include <EEPROM.h>
 
 #include "Font_Data.h"
 #include "config.h"
@@ -16,10 +15,6 @@
 #define CLK_PIN   18
 #define DATA_PIN  19
 #define CS_PIN    5
-
-// for saving city and countrycode
-#define CITY_ADDRESS 0
-#define COUNTRY_CODE_ADDRESS 20
 
 MD_Parola P = MD_Parola(HARDWARE_TYPE, DATA_PIN, CLK_PIN, CS_PIN, MAX_DEVICES);
 
@@ -44,8 +39,8 @@ uint16_t scrollPause = 10;
 
 const int timezoneInSeconds = TZ_DATA;
 String openWeatherMapApiKey = OPEN_WEATHER_API_KEY;
-String city;
-String countryCode;
+String city = CITY;
+String countryCode = COUNTRYCODE;
 uint8_t degC[] = { 6, 3, 3, 56, 68, 68, 68 }; // Deg C
 
 unsigned long weatherLastTime = 0;
@@ -144,16 +139,6 @@ void showTelegramText() {
 char telegramText[256] = {'\0'};
 }
 
-void updateCity(String newCity) {
-  city = newCity;
-  saveStringToEEPROM(CITY_ADDRESS, city);
-}
-
-void updateCountryCode(String newCountryCode) {
-  countryCode = newCountryCode;
-  saveStringToEEPROM(COUNTRY_CODE_ADDRESS, countryCode);
-}
-
 void showWeather() {
   if (WiFi.status() != WL_CONNECTED) {
     Serial.println("WiFi Disconnected");
@@ -183,9 +168,9 @@ void showWeather() {
     String cleanedDescription = replaceUmlaute(descriptionStr);
 
     Serial.print("City, Country: ");
-    Serial.print(city);
+    Serial.print(CITY);
     Serial.print(", ");
-    Serial.println(countryCode);
+    Serial.println(COUNTRYCODE);
     Serial.print("Temperature: ");
     Serial.println(temperatureStr);
     Serial.print("Pressure: ");
@@ -198,7 +183,7 @@ void showWeather() {
     Serial.println(cleanedDescription);
 
     char alles[200];
-    sprintf(alles, "Das aktuelle Wetter fuer %s, %s: %s, Temperatur: %s \xB0""C, Luftdruck: %s hPa, Luftfeuchtigkeit: %s %%, Wind: %s m/s", city, countryCode, cleanedDescription.c_str(), temperatureStr, pressureStr, humidityStr, windSpeedStr);
+    sprintf(alles, "Das aktuelle Wetter fuer %s, %s: %s, Temperatur: %s \xB0""C, Luftdruck: %s hPa, Luftfeuchtigkeit: %s %%, Wind: %s m/s", CITY, COUNTRYCODE, cleanedDescription.c_str(), temperatureStr, pressureStr, humidityStr, windSpeedStr);
 
 showText(alles);
   }
@@ -224,22 +209,6 @@ void updateTelegram(void *pvParameters) {
   }
 }
 
-void saveStringToEEPROM(int address, const String& data) {
-  int length = data.length() + 1; // inklusive Nullzeichen
-  for (int i = 0; i < length; ++i) {
-    EEPROM.write(address + i, data[i]);
-  }
-  EEPROM.commit();
-}
-
-String loadStringFromEEPROM(int address) {
-  String result;
-  char c;
-  while ((c = EEPROM.read(address++)) != 0) {
-    result += c;
-  }
-  return result;
-}
 
 
 void setup(void) {
@@ -263,14 +232,6 @@ void setup(void) {
   secured_client.setCACert(TELEGRAM_CERTIFICATE_ROOT);
   showText("synchronisiere mit NTP Server");
   getTimentp();
-
-  // Überprüfe, ob Werte im EEPROM vorhanden sind
-  String storedCity = loadStringFromEEPROM(CITY_ADDRESS);
-  String storedCountryCode = loadStringFromEEPROM(COUNTRY_CODE_ADDRESS);
-
-  // Verwende Standardwerte, wenn im EEPROM keine Werte vorhanden sind
-  city = (storedCity.length() > 0) ? storedCity : "Dresden";
-  countryCode = (storedCountryCode.length() > 0) ? storedCountryCode : "DE";
 
   P.begin(3);
   P.setInvert(false);
@@ -431,27 +392,13 @@ String replaceUmlaute(String input) {
   return input;
 }
 
-void handleNewMessages(int numNewMessages) {
+void handleNewMessages(int numNewMessages)
+{
   String messageContent;
-  for (int i = 0; i < numNewMessages; i++) {
-    bot.sendMessage(bot.messages[i].chat_id, "Nachricht empfangen", "");
-
-    // Befehl zum Aktualisieren der Stadt
-    if (bot.messages[i].text.startsWith("/setcity")) {
-      String newCity = bot.messages[i].text.substring(8); // Annahme: /setcity Stadtname
-      updateCity(newCity);
-      bot.sendMessage(bot.messages[i].chat_id, "Stadt aktualisiert", "");
-    }
-
-    // Befehl zum Aktualisieren des Landes
-    else if (bot.messages[i].text.startsWith("/setcountry")) {
-      String newCountryCode = bot.messages[i].text.substring(11); // Annahme: /setcountry Ländercode
-      updateCountryCode(newCountryCode);
-      bot.sendMessage(bot.messages[i].chat_id, "Land aktualisiert", "");
-    }
-
-    // Weitere Befehle können hier hinzugefügt werden.
-
+  for (int i = 0; i < numNewMessages; i++)
+  {
+    bot.sendMessage(bot.messages[i].chat_id, "message received", "");
+    Serial.print(bot.messages[i].text);
     messageContent += bot.messages[i].text;
   }
   strcpy(telegramText, messageContent.c_str());
