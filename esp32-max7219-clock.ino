@@ -6,6 +6,9 @@
 #include <SPI.h>
 #include <HTTPClient.h>
 #include <Arduino_JSON.h>
+#include "FS.h"
+#include <LittleFS.h>
+
 
 #include "Font_Data.h"
 #include "config.h"
@@ -21,6 +24,8 @@ MD_Parola P = MD_Parola(HARDWARE_TYPE, DATA_PIN, CLK_PIN, CS_PIN, MAX_DEVICES);
 #define SPEED_TIME  75
 #define PAUSE_TIME  0
 #define MAX_MESG  20
+
+#define FORMAT_LITTLEFS_IF_FAILED true
 
 // Telegram settings
 const unsigned long BOT_MTBS = 1000;
@@ -39,8 +44,8 @@ uint16_t scrollPause = 10;
 
 const int timezoneInSeconds = TZ_DATA;
 String openWeatherMapApiKey = OPEN_WEATHER_API_KEY;
-String city = CITY;
-String countryCode = COUNTRYCODE;
+String city = "";
+String countryCode = "";
 uint8_t degC[] = { 6, 3, 3, 56, 68, 68, 68 }; // Deg C
 
 unsigned long weatherLastTime = 0;
@@ -168,9 +173,9 @@ void showWeather() {
     String cleanedDescription = replaceUmlaute(descriptionStr);
 
     Serial.print("City, Country: ");
-    Serial.print(CITY);
+    Serial.print(city);
     Serial.print(", ");
-    Serial.println(COUNTRYCODE);
+    Serial.println(countryCode);
     Serial.print("Temperature: ");
     Serial.println(temperatureStr);
     Serial.print("Pressure: ");
@@ -183,7 +188,7 @@ void showWeather() {
     Serial.println(cleanedDescription);
 
     char alles[200];
-    sprintf(alles, "Das aktuelle Wetter fuer %s, %s: %s, Temperatur: %s \xB0""C, Luftdruck: %s hPa, Luftfeuchtigkeit: %s %%, Wind: %s m/s", CITY, COUNTRYCODE, cleanedDescription.c_str(), temperatureStr, pressureStr, humidityStr, windSpeedStr);
+    sprintf(alles, "Das aktuelle Wetter fuer %s, %s: %s, Temperatur: %s \xB0""C, Luftdruck: %s hPa, Luftfeuchtigkeit: %s %%, Wind: %s m/s", city, countryCode, cleanedDescription.c_str(), temperatureStr, pressureStr, humidityStr, windSpeedStr);
 
 showText(alles);
   }
@@ -209,6 +214,52 @@ void updateTelegram(void *pvParameters) {
   }
 }
 
+String readFile(fs::FS &fs, const char *path) {
+  Serial.print("Lese Datei: ");
+  Serial.println(path);
+
+  String fileContent = ""; // Hier wird der Dateiinhalt gespeichert
+
+  File file = fs.open(path);
+  if (!file || file.isDirectory()) {
+    Serial.println("- Fehler beim Öffnen der Datei zum Lesen");
+    return "error";
+  }
+  
+  while (file.available()) {
+    char currentChar = file.read();
+    fileContent += currentChar; // Füge das aktuelle Zeichen zum Dateiinhalt hinzu
+  }
+
+  file.close();
+  return fileContent; // Gib den Dateiinhalt zurück
+}
+
+
+void writeFile(fs::FS &fs, const char * path, const char * message){
+  Serial.printf("Writing file: %s\r\n", path);
+
+  File file = fs.open(path, FILE_WRITE);
+  if(!file){
+    Serial.println("- failed to open file for writing");
+    return;
+  }
+  if(file.print(message)){
+    Serial.println("- file written");
+  } else {
+    Serial.println("- write failed");
+  }
+  file.close();
+}
+
+void deleteFile(fs::FS &fs, const char * path){
+  Serial.printf("Deleting file: %s\r\n", path);
+  if(fs.remove(path)){
+    Serial.println("- file deleted");
+  } else {
+    Serial.println("- delete failed");
+  }
+}
 
 
 void setup(void) {
@@ -232,6 +283,22 @@ void setup(void) {
   secured_client.setCACert(TELEGRAM_CERTIFICATE_ROOT);
   showText("synchronisiere mit NTP Server");
   getTimentp();
+
+  if(!LittleFS.begin(FORMAT_LITTLEFS_IF_FAILED)){
+  Serial.println("LittleFS Mount Failed");
+  return;
+}
+
+city = readFile(LittleFS, "/city.txt");
+countryCode = readFile(LittleFS, "/country.txt");
+Serial.println(city);
+Serial.println(countryCode);
+if ((city == "error") || (countryCode == "error")) {
+  city = "Dresden";
+  countryCode = "DE";
+  writeFile(LittleFS, "/city.txt", city.c_str());
+  writeFile(LittleFS, "/country.txt", countryCode.c_str());
+}
 
   P.begin(3);
   P.setInvert(false);
@@ -392,6 +459,43 @@ String replaceUmlaute(String input) {
   return input;
 }
 
+void handleNewMessages(int numNewMessages) {
+  String messageContent;
+  bool restart = false;
+  for (int i = 0; i < numNewMessages; i++) {
+    bot.sendMessage(bot.messages[i].chat_id, "message received", "");
+    Serial.print(bot.messages[i].text);
+    messageContent += bot.messages[i].text;
+
+    // Prüfe, ob die Nachricht den Befehl "/setcity" enthält
+    if (messageContent.startsWith("/setcity ")) {
+      // Extrahiere den Stadtnamen aus der Nachricht
+      String newCity = messageContent.substring(9);
+
+      // Speichere den Stadtnamen in der Datei
+      writeFile(LittleFS, "/city.txt", newCity.c_str());
+    }
+
+    // Prüfe, ob die Nachricht den Befehl "/setcountry" enthält
+    else if (messageContent.startsWith("/setcountry ")) {
+      // Extrahiere den Ländercode aus der Nachricht
+      String newCountry = messageContent.substring(12);
+
+      // Speichere den Ländercode in der Datei
+      writeFile(LittleFS, "/country.txt", newCountry.c_str());
+    }
+
+    // Prüfe ob die Nachricht den Befehl "/reboot" enthält
+    else if (messageContent.startsWith("/reboot")) {
+      restart = true;
+    }
+  }
+
+  // Kopiere den Inhalt der empfangenen Nachricht in das telegramText-Array
+  strcpy(telegramText, messageContent.c_str());
+}
+
+/*
 void handleNewMessages(int numNewMessages)
 {
   String messageContent;
@@ -403,3 +507,4 @@ void handleNewMessages(int numNewMessages)
   }
   strcpy(telegramText, messageContent.c_str());
 }
+*/
